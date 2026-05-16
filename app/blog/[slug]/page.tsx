@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAllPosts, getPostBySlug } from "@/lib/posts";
+import { getAllPosts, getPostBySlug } from "@/lib/microcms";
 
 type PageProps = {
   params: Promise<{ slug: string }>;

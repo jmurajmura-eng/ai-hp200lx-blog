@@ -1,5 +1,5 @@
 import { PostCard } from "@/components/PostCard";
-import { getAllPosts } from "@/lib/posts";
+import { getAllPosts } from "@/lib/microcms";
 
 export const revalidate = 60;
 

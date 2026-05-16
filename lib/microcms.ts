@@ -1,5 +1,8 @@
 import { createClient } from "microcms-js-sdk";
 
+/** https://ahp.microcms.io/api/v1/ah3 */
+const MICROCMS_ENDPOINT = "ah3";
+
 export type Post = {
   slug: string;
   title: string;
@@ -12,7 +15,6 @@ type MicroCMSPostRaw = {
   id: string;
   title?: string;
   body?: string;
-  content?: string;
   excerpt?: string;
   description?: string;
   summary?: string;
@@ -21,46 +23,18 @@ type MicroCMSPostRaw = {
   createdAt: string;
 };
 
-type MicroCMSConfig = {
-  serviceDomain: string;
-  endpoint: string;
-};
-
-function resolveMicroCMSConfig(): MicroCMSConfig {
-  const endpointEnv = process.env.MICROCMS_API_ENDPOINT ?? "blogs";
-  let serviceDomain = process.env.MICROCMS_SERVICE_DOMAIN;
-  let endpoint = endpointEnv;
-
-  if (endpointEnv.startsWith("http://") || endpointEnv.startsWith("https://")) {
-    const url = new URL(endpointEnv);
-    serviceDomain = url.hostname.replace(/\.microcms\.io$/i, "");
-    const match = url.pathname.match(/\/api\/v1\/([^/]+)/);
-    endpoint =
-      match?.[1] ?? url.pathname.split("/").filter(Boolean).pop() ?? endpointEnv;
-  }
+function getClient() {
+  const serviceDomain = process.env.MICROCMS_SERVICE_DOMAIN;
+  const apiKey = process.env.MICROCMS_API_KEY;
 
   if (!serviceDomain) {
-    throw new Error(
-      "MICROCMS_SERVICE_DOMAIN を設定するか、MICROCMS_API_ENDPOINT に microCMS の API URL を指定してください。",
-    );
+    throw new Error("MICROCMS_SERVICE_DOMAIN を .env.local に設定してください。");
   }
-
-  return { serviceDomain, endpoint };
-}
-
-function getClient() {
-  const apiKey = process.env.MICROCMS_API_KEY;
-  const { serviceDomain } = resolveMicroCMSConfig();
-
   if (!apiKey) {
     throw new Error("MICROCMS_API_KEY を .env.local に設定してください。");
   }
 
   return createClient({ serviceDomain, apiKey });
-}
-
-function getEndpoint(): string {
-  return resolveMicroCMSConfig().endpoint;
 }
 
 function stripHtml(html: string): string {
@@ -75,7 +49,7 @@ function toExcerpt(item: MicroCMSPostRaw, body: string): string {
 }
 
 function toPost(item: MicroCMSPostRaw): Post {
-  const body = item.body ?? item.content ?? "";
+  const body = item.body ?? "";
   const slug =
     typeof item.slug === "string" && item.slug.length > 0 ? item.slug : item.id;
 
@@ -88,22 +62,35 @@ function toPost(item: MicroCMSPostRaw): Post {
   };
 }
 
-export async function getAllPosts(): Promise<Post[]> {
-  const data = await getClient().getList<MicroCMSPostRaw>({
-    endpoint: getEndpoint(),
-    queries: { orders: "-publishedAt" },
-  });
+function wrapMicroCMSError(error: unknown): never {
+  const message =
+    error instanceof Error ? error.message : "記事の取得に失敗しました。";
 
-  return data.contents.map(toPost);
+  if (message.includes("404")) {
+    throw new Error(
+      `microCMS API が見つかりません（${MICROCMS_ENDPOINT}）。サービス「${process.env.MICROCMS_SERVICE_DOMAIN}」にエンドポイント「${MICROCMS_ENDPOINT}」が存在するか確認してください。`,
+    );
+  }
+
+  throw new Error(`microCMS: ${message}`);
+}
+
+export async function getAllPosts(): Promise<Post[]> {
+  try {
+    const data = await getClient().getList<MicroCMSPostRaw>({
+      endpoint: MICROCMS_ENDPOINT,
+      queries: { orders: "-publishedAt" },
+    });
+    return data.contents.map(toPost);
+  } catch (error) {
+    wrapMicroCMSError(error);
+  }
 }
 
 export async function getPostBySlug(slug: string): Promise<Post | undefined> {
-  const client = getClient();
-  const endpoint = getEndpoint();
-
   try {
-    const item = await client.getListDetail<MicroCMSPostRaw>({
-      endpoint,
+    const item = await getClient().getListDetail<MicroCMSPostRaw>({
+      endpoint: MICROCMS_ENDPOINT,
       contentId: slug,
     });
     return toPost(item);
@@ -111,9 +98,4 @@ export async function getPostBySlug(slug: string): Promise<Post | undefined> {
     const posts = await getAllPosts();
     return posts.find((post) => post.slug === slug);
   }
-}
-
-export async function getPostSlugs(): Promise<string[]> {
-  const posts = await getAllPosts();
-  return posts.map((post) => post.slug);
 }
