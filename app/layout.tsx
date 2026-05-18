@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { Header } from "@/components/Header";
+import { ScrollToTop } from "@/components/ScrollToTop";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -28,6 +29,7 @@ export default function RootLayout({
         <main className="min-h-[calc(100vh-4.5rem)]">
           {children}
         </main>
+        <ScrollToTop />
         <footer className="bg-gray-800 py-8 text-center text-sm text-gray-400">
           © {new Date().getFullYear()} My Blog
         </footer>
