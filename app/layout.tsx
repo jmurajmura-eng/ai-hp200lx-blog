@@ -25,10 +25,10 @@ export default function RootLayout({
     <html lang="ja">
       <body className={`${geistSans.variable} font-sans`}>
         <Header />
-        <main className="mx-auto min-h-[calc(100vh-4.5rem)] max-w-3xl px-6 py-12">
+        <main className="min-h-[calc(100vh-4.5rem)]">
           {children}
         </main>
-        <footer className="border-t border-stone-200 py-8 text-center text-sm text-stone-400">
+        <footer className="bg-gray-800 py-8 text-center text-sm text-gray-400">
           © {new Date().getFullYear()} My Blog
         </footer>
       </body>
