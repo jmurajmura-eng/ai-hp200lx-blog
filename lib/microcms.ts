@@ -9,6 +9,7 @@ export type Post = {
   date: string;
   excerpt: string;
   body: string;
+  thumbnail?: { url: string; width?: number; height?: number };
 };
 
 type MicroCMSPostRaw = {
@@ -21,6 +22,8 @@ type MicroCMSPostRaw = {
   slug?: string;
   publishedAt?: string;
   createdAt: string;
+  eyecatch?: { url: string; width?: number; height?: number };
+  thumbnail?: { url: string; width?: number; height?: number };
 };
 
 function getClient() {
@@ -59,6 +62,7 @@ function toPost(item: MicroCMSPostRaw): Post {
     date: item.publishedAt ?? item.createdAt,
     excerpt: toExcerpt(item, body),
     body,
+    thumbnail: item.eyecatch ?? item.thumbnail,
   };
 }
 

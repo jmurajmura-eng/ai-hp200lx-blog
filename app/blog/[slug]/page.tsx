@@ -42,31 +42,51 @@ export default async function BlogPostPage({ params }: PageProps) {
 
   return (
     <>
-      {/* ヒーローバナー */}
-      <section className="bg-[#E8001C] py-10 text-center">
-        <h1 className="text-2xl font-bold text-white px-6 leading-relaxed">{post.title}</h1>
-        <time dateTime={post.date} className="mt-2 block text-white/70 text-sm">
-          {formatDate(post.date)}
-        </time>
+      {/* Header */}
+      <section className="bg-term-surface border-b-2 border-term-border py-10">
+        <div className="mx-auto max-w-3xl px-6">
+          <div className="border border-term-border p-6">
+            <p className="text-xs text-term-dim tracking-[0.3em] mb-3 uppercase">
+              ▶ Article
+            </p>
+            <h1 className="text-2xl font-bold text-term-white leading-relaxed mb-3">
+              {post.title}
+            </h1>
+            <time dateTime={post.date} className="text-sm text-term-dim">
+              {formatDate(post.date)}
+            </time>
+          </div>
+        </div>
       </section>
 
-      {/* 記事本文 */}
-      <section className="bg-[#F5F5F5] py-10">
+      {/* Body */}
+      <section className="bg-term-bg py-10">
         <div className="mx-auto max-w-3xl px-6">
           <Link
             href="/"
-            className="inline-flex items-center gap-1 text-sm text-[#E8001C] hover:underline mb-6"
+            className="inline-flex items-center gap-2 text-sm text-term-text hover:text-term-bright transition-colors mb-6 tracking-wide"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            一覧に戻る
+            ◀ 一覧に戻る
           </Link>
 
-          <div className="bg-white rounded-lg border border-gray-200 p-8">
-            <p className="text-gray-500 leading-relaxed mb-6">{post.excerpt}</p>
+          <div className="border border-term-border bg-term-card p-8">
+            <p className="text-term-dim leading-relaxed mb-6 pb-6 border-b border-term-border">
+              {post.excerpt}
+            </p>
             <div
-              className="prose prose-gray prose-lg max-w-none prose-headings:font-semibold prose-a:text-[#E8001C] prose-a:no-underline hover:prose-a:underline prose-img:rounded-lg"
+              className="prose max-w-none
+                [&_h1]:text-term-white [&_h1]:font-bold
+                [&_h2]:text-term-white [&_h2]:font-bold [&_h2]:border-b [&_h2]:border-term-border [&_h2]:pb-1
+                [&_h3]:text-term-bright [&_h3]:font-bold
+                [&_p]:text-term-text [&_p]:leading-relaxed
+                [&_a]:text-term-bright [&_a]:no-underline hover:[&_a]:underline
+                [&_strong]:text-term-white
+                [&_code]:text-term-amber [&_code]:bg-term-surface [&_code]:px-1
+                [&_pre]:bg-term-surface [&_pre]:border [&_pre]:border-term-border [&_pre]:p-4
+                [&_blockquote]:border-l-2 [&_blockquote]:border-term-border [&_blockquote]:text-term-dim [&_blockquote]:pl-4
+                [&_ul]:text-term-text [&_ol]:text-term-text
+                [&_li]:marker:text-term-bright
+                [&_img]:border [&_img]:border-term-border"
               dangerouslySetInnerHTML={{ __html: post.body }}
             />
           </div>

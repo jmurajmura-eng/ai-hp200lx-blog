@@ -15,29 +15,67 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* ヒーローバナー */}
-      <section className="bg-[#E8001C] py-16 text-center">
-        <h1 className="text-4xl font-bold text-white tracking-wide">ブログ</h1>
-        <p className="mt-3 text-white/80 text-lg">最新の記事をお届けします</p>
+      {/* Hero */}
+      <section className="bg-term-surface border-b-2 border-term-border py-16">
+        <div className="mx-auto max-w-2xl px-6 text-center">
+          <div className="relative border-2 border-term-bright p-10">
+            <span className="absolute top-0 left-0 text-term-bright text-xl leading-none select-none">
+              ╔
+            </span>
+            <span className="absolute top-0 right-0 text-term-bright text-xl leading-none select-none">
+              ╗
+            </span>
+            <span className="absolute bottom-0 left-0 text-term-bright text-xl leading-none select-none">
+              ╚
+            </span>
+            <span className="absolute bottom-0 right-0 text-term-bright text-xl leading-none select-none">
+              ╝
+            </span>
+
+            <p className="text-term-dim text-xs tracking-[0.3em] mb-5 uppercase">
+              HP200LX Blog System v1.0
+            </p>
+            <h1
+              className="text-5xl font-bold text-term-white mb-4 tracking-[0.2em]"
+              style={{ textShadow: "0 0 12px #00ff66, 0 0 24px #00aa44" }}
+            >
+              BLOG
+            </h1>
+            <p className="text-term-text tracking-wide text-lg">
+              ▶ 最新の記事をお届けします
+            </p>
+            <div className="mt-6 flex items-center justify-center gap-3 text-xs text-term-dim tracking-widest">
+              <span>━━━━━</span>
+              <span>LOADING COMPLETE</span>
+              <span>━━━━━</span>
+            </div>
+          </div>
+        </div>
       </section>
 
-      {/* 記事一覧 */}
-      <section className="bg-[#F5F5F5] py-12">
+      {/* Articles */}
+      <section className="bg-term-bg py-12">
         <div className="mx-auto max-w-6xl px-6">
-          {/* セクションタイトル */}
-          <div className="flex items-center justify-center gap-4 mb-8">
-            <span className="block w-10 h-0.5 bg-[#E8001C]"></span>
-            <h2 className="text-2xl font-bold text-gray-800">記事一覧</h2>
-            <span className="block w-10 h-0.5 bg-[#E8001C]"></span>
+          <div className="flex items-center gap-3 mb-8">
+            <span className="text-term-bright text-lg">▶</span>
+            <h2 className="text-xl font-bold text-term-white tracking-[0.2em]">
+              ARTICLES
+            </h2>
+            <span className="flex-1 border-b border-term-border" />
+            {!error && (
+              <span className="text-xs text-term-dim tracking-widest">
+                {posts.length} entries
+              </span>
+            )}
           </div>
 
           {error ? (
-            <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-              {error}
-            </p>
+            <div className="border border-term-amber bg-term-surface px-4 py-3 text-sm text-term-amber tracking-wide">
+              ⚠ ERROR: {error}
+            </div>
           ) : posts.length === 0 ? (
-            <p className="text-center text-gray-500">
-              公開中の記事がありません。
+            <p className="text-center text-term-dim py-16 tracking-widest">
+              公開中の記事がありません
             </p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

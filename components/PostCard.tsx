@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Post } from "@/lib/microcms";
 
 type PostCardProps = {
@@ -7,26 +8,44 @@ type PostCardProps = {
 
 export function PostCard({ post }: PostCardProps) {
   return (
-    <article className="bg-white rounded-lg border border-gray-200 hover:shadow-md transition group">
-      <Link href={`/blog/${post.slug}`} className="flex items-center justify-between p-5">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-[#FFF0F0] flex items-center justify-center flex-shrink-0">
-            <svg className="w-5 h-5 text-[#E8001C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+    <article className="border border-term-border bg-term-card hover:border-term-bright transition-colors group">
+      <Link href={`/blog/${post.slug}`} className="block">
+        {post.thumbnail ? (
+          <div className="relative w-full h-40 overflow-hidden border-b border-term-border">
+            <Image
+              src={post.thumbnail.url}
+              alt={post.title}
+              fill
+              className="object-cover"
+              style={{
+                filter:
+                  "grayscale(1) sepia(0.4) hue-rotate(80deg) saturate(2) brightness(0.55)",
+              }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-term-card to-transparent opacity-60" />
           </div>
-          <div>
-            <h2 className="font-semibold text-gray-800 group-hover:text-[#E8001C] transition line-clamp-2 leading-snug">
-              {post.title}
-            </h2>
-            <time dateTime={post.date} className="text-xs text-gray-400 mt-1 block">
+        ) : (
+          <div className="w-full h-24 border-b border-term-border bg-term-surface flex items-center justify-center select-none">
+            <span className="text-term-border text-4xl tracking-widest">▓▒░</span>
+          </div>
+        )}
+
+        <div className="p-4">
+          <h2 className="text-term-bright font-bold leading-snug line-clamp-2 mb-2 group-hover:text-term-white transition-colors">
+            {post.title}
+          </h2>
+          <p className="text-term-dim text-sm line-clamp-2 mb-4 leading-relaxed">
+            {post.excerpt}
+          </p>
+          <div className="flex items-center justify-between text-xs">
+            <time dateTime={post.date} className="text-term-dim">
               {formatDate(post.date)}
             </time>
+            <span className="text-term-text group-hover:text-term-bright transition-colors tracking-widest">
+              READ ▶
+            </span>
           </div>
         </div>
-        <svg className="w-5 h-5 text-[#E8001C] flex-shrink-0 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
       </Link>
     </article>
   );
@@ -35,7 +54,7 @@ export function PostCard({ post }: PostCardProps) {
 function formatDate(date: string): string {
   return new Date(date).toLocaleDateString("ja-JP", {
     year: "numeric",
-    month: "long",
-    day: "numeric",
+    month: "2-digit",
+    day: "2-digit",
   });
 }

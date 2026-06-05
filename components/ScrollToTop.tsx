@@ -16,12 +16,11 @@ export function ScrollToTop() {
   return (
     <button
       onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-      className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-[#E8001C] text-white shadow-lg flex items-center justify-center hover:bg-[#c0001a] transition"
+      className="fixed bottom-6 right-6 z-50 w-12 h-12 border-2 border-term-bright bg-term-card text-term-bright flex items-center justify-center hover:bg-term-text hover:text-term-bg transition-colors font-bold text-xl tracking-wider"
       aria-label="ページトップへ戻る"
+      style={{ textShadow: "0 0 8px #00ff66" }}
     >
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-      </svg>
+      ▲
     </button>
   );
 }

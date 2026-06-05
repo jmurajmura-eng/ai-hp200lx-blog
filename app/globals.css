@@ -2,9 +2,38 @@
 @plugin "@tailwindcss/typography";
 
 @theme inline {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-retro), "Courier New", monospace;
+}
+
+@theme {
+  --color-term-bg: #001100;
+  --color-term-surface: #001a00;
+  --color-term-card: #002200;
+  --color-term-border: #004422;
+  --color-term-dim: #006633;
+  --color-term-text: #00aa44;
+  --color-term-bright: #00ff66;
+  --color-term-white: #ccffcc;
+  --color-term-amber: #ffcc00;
 }
 
 body {
-  @apply bg-white text-gray-800 antialiased;
+  @apply bg-term-bg text-term-text antialiased;
+  letter-spacing: 0.03em;
+}
+
+/* CRT scanline overlay */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.06) 2px,
+    rgba(0, 0, 0, 0.06) 4px
+  );
 }
