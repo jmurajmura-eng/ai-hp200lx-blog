@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>缶を斜めに立てよう！物理シミュレーター</title>
+<style>
+:root{
+  --bg:#f3f6fa; --card:#fff; --line:#d8e0e9; --text:#1f2937; --muted:#64748b;
+  --blue:#2563eb; --red:#ef4444; --green:#15803d; --amber:#b45309;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;
+}
+header{background:#fff;border-bottom:1px solid var(--line);padding:14px 16px}
+h1{font-size:22px;margin:0 0 4px}
+header p{margin:0;color:var(--muted);font-size:13px}
+main{max-width:1100px;margin:auto;padding:14px;display:grid;grid-template-columns:1.35fr .65fr;gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 4px 16px #0000000b}
+canvas{display:block;width:100%;height:auto;border-radius:12px;background:#dff2ff;touch-action:none}
+.control{margin-bottom:15px}
+.control label{display:flex;justify-content:space-between;gap:10px;font-weight:800;margin-bottom:7px}
+.control output{color:#1d4ed8;font-variant-numeric:tabular-nums}
+input[type=range],select{width:100%}
+select{padding:10px;border:1px solid #bcc7d4;border-radius:10px;background:#fff;font-size:16px}
+.buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+button{padding:11px;border:0;border-radius:10px;font-weight:800;cursor:pointer}
+.primary{background:var(--blue);color:#fff}.secondary{background:#e8eef7;color:#1e3a8a}
+.status{font-size:20px;font-weight:900;text-align:center;border-radius:12px;padding:13px;margin-top:10px}
+.ok{background:#dcfce7;color:var(--green)}.near{background:#fef3c7;color:var(--amber)}.ng{background:#fee2e2;color:#b91c1c}
+.data{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.data div{background:#f8fafc;border-radius:9px;padding:9px;font-size:12px}
+.data b{display:block;font-size:17px;margin-top:3px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--muted)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px}
+.small{font-size:12px;line-height:1.55;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{padding:6px;border-bottom:1px solid var(--line);text-align:center}
+details{margin-top:10px}
+summary{font-weight:800;cursor:pointer}
+@media(max-width:820px){main{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>缶を斜めに立てよう！物理シミュレーター</h1>
+  <p>黒丸は、缶の外形と地面が実際に接する点に自動で移動します。</p>
+</header>
+
+<main>
+<section class="card">
+  <canvas id="sim" width="760" height="620"></canvas>
+  <div class="legend">
+    <span><i class="dot" style="background:#111827"></i>接点</span>
+    <span><i class="dot" style="background:#ef4444"></i>缶＋水の重心</span>
+    <span><i class="dot" style="background:#2563eb"></i>水</span>
+    <span>赤い破線＝重心から真下</span>
+  </div>
+</section>
+
+<aside>
+<section class="card">
+  <div class="control">
+    <label for="canType">缶の種類</label>
+    <select id="canType">
+      <option value="al350">350ml アルミ缶</option>
+      <option value="steel250">250ml スチール缶</option>
+    </select>
+  </div>
+
+  <div class="control">
+    <label for="water">水の量 <output id="waterOut">90 ml</output></label>
+    <input id="water" type="range" min="0" max="350" step="1" value="90">
+  </div>
+
+  <div class="control">
+    <label for="angle">缶の傾き <output id="angleOut">30.0°</output></label>
+    <input id="angle" type="range" min="0" max="70" step="0.1" value="30">
+  </div>
+
+  <div class="buttons">
+    <button class="primary" id="findAngle">立つ角度を探す</button>
+    <button class="secondary" id="record">記録する</button>
+  </div>
+
+  <div id="status" class="status near">計算中</div>
+
+  <div class="data">
+    <div>缶の寸法<b id="dims">-</b></div>
+    <div>空缶重量<b id="emptyMass">-</b></div>
+    <div>接点とのずれ<b id="offset">-</b></div>
+    <div>水面の高さ<b id="waterHeight">-</b></div>
+  </div>
+
+  <details>
+    <summary>この判定の考え方</summary>
+    <p class="small">
+      缶の外周を細かい点で表し、傾けたとき最も低くなる点を地面に合わせています。
+      その点が黒丸です。水は水平な水面になるよう缶の内部を切り取り、水の重心を計算します。
+      赤い重心から真下に下ろした線が黒丸に近いほど、斜めに静止しやすいと判定します。
+    </p>
+  </details>
+</section>
+
+<section class="card" style="margin-top:14px">
+  <b>実験記録</b>
+  <table>
+    <thead><tr><th>缶</th><th>水</th><th>角度</th><th>ずれ</th></tr></thead>
+    <tbody id="log"><tr><td colspan="4">まだありません</td></tr></tbody>
+  </table>
+  <button class="secondary" id="clear" style="width:100%;margin-top:9px">記録を消す</button>
+</section>
+</aside>
+</main>
+
+<script>
+const canvas = document.getElementById('sim');
+const ctx = canvas.getContext('2d');
+
+const canType = document.getElementById('canType');
+const water = document.getElementById('water');
+const angle = document.getElementById('angle');
+
+const cans = {
+  al350: {
+    name:'350mlアルミ缶', capacity:350,
+    width:66, height:122, emptyMass:14,
+    topInset:4.5, bottomInset:4.0, corner:5.0
+  },
+  steel250: {
+    name:'250mlスチール缶', capacity:250,
+    width:53, height:104, emptyMass:24,
+    topInset:2.5, bottomInset:3.0, corner:3.5
+  }
+};
+
+let records = [];
+
+function rotatePoint(p, a) {
+  const c = Math.cos(a), s = Math.sin(a);
+  return {x:p.x*c - p.y*s, y:p.x*s + p.y*c};
+}
+
+function polygonArea(poly) {
+  let a = 0;
+  for (let i=0, j=poly.length-1; i<poly.length; j=i++) {
+    a += poly[j].x*poly[i].y - poly[i].x*poly[j].y;
+  }
+  return a/2;
+}
+
+function polygonCentroid(poly) {
+  let A = polygonArea(poly);
+  if (Math.abs(A) < 1e-9) return {x:0,y:0};
+  let cx=0, cy=0;
+  for (let i=0, j=poly.length-1; i<poly.length; j=i++) {
+    const f = poly[j].x*poly[i].y - poly[i].x*poly[j].y;
+    cx += (poly[j].x + poly[i].x)*f;
+    cy += (poly[j].y + poly[i].y)*f;
+  }
+  return {x:cx/(6*A), y:cy/(6*A)};
+}
+
+function clipBelowY(poly, yLine) {
+  const out = [];
+  for (let i=0; i<poly.length; i++) {
+    const A = poly[i], B = poly[(i+1)%poly.length];
+    const Ain = A.y >= yLine, Bin = B.y >= yLine;
+    if (Ain) out.push(A);
+    if (Ain !== Bin) {
+      const t = (yLine - A.y)/(B.y - A.y);
+      out.push({x:A.x + t*(B.x-A.x), y:yLine});
+    }
+  }
+  return out;
+}
+
+function roundedCanPerimeter(c, n=240) {
+  const w=c.width/2, h=c.height/2, r=c.corner;
+  const pts=[];
+  function arc(cx,cy,rad,a0,a1,count){
+    for(let i=0;i<count;i++){
+      const t=i/(count-1), a=a0+(a1-a0)*t;
+      pts.push({x:cx+rad*Math.cos(a),y:cy+rad*Math.sin(a)});
+    }
+  }
+  const q=Math.floor(n/4);
+  arc(w-r,-h+r,r,-Math.PI/2,0,q);
+  arc(w-r,h-r,r,0,Math.PI/2,q);
+  arc(-w+r,h-r,r,Math.PI/2,Math.PI,q);
+  arc(-w+r,-h+r,r,Math.PI,Math.PI*1.5,q);
+  return pts;
+}
+
+function makeGeometry() {
+  const c = cans[canType.value];
+  const a = Number(angle.value)*Math.PI/180;
+  const base = roundedCanPerimeter(c);
+  let poly = base.map(p=>rotatePoint(p,a));
+
+  const maxY = Math.max(...poly.map(p=>p.y));
+  poly = poly.map(p=>({x:p.x,y:p.y-maxY}));
+
+  const near = poly.filter(p=>p.y>-0.08);
+  const contact = near.reduce((acc,p)=>({x:acc.x+p.x,y:0}),{x:0,y:0});
+  contact.x /= Math.max(1,near.length);
+
+  const totalArea = Math.abs(polygonArea(poly));
+  const fraction = Math.max(0, Math.min(1, Number(water.value)/c.capacity));
+
+  let waterPoly=[], waterLine=0;
+  if (fraction > 0) {
+    const minY = Math.min(...poly.map(p=>p.y));
+    let lo=minY, hi=0;
+    for(let k=0;k<50;k++){
+      const mid=(lo+hi)/2;
+      const clipped=clipBelowY(poly,mid);
+      const area=clipped.length>=3?Math.abs(polygonArea(clipped)):0;
+      if(area/totalArea > fraction) lo=mid;
+      else hi=mid;
+    }
+    waterLine=(lo+hi)/2;
+    waterPoly=clipBelowY(poly,waterLine);
+  }
+
+  const shellCOM = polygonCentroid(poly);
+  const waterCOM = waterPoly.length>=3 ? polygonCentroid(waterPoly) : shellCOM;
+  const waterMass = Number(water.value);
+  const totalMass = c.emptyMass + waterMass;
+  const combinedCOM = {
+    x:(shellCOM.x*c.emptyMass + waterCOM.x*waterMass)/Math.max(totalMass,1e-9),
+    y:(shellCOM.y*c.emptyMass + waterCOM.y*waterMass)/Math.max(totalMass,1e-9)
+  };
+  const offset = combinedCOM.x-contact.x;
+  return {c,poly,contact,waterPoly,waterLine,shellCOM,waterCOM,combinedCOM,offset};
+}
+
+function drawPolygon(poly, ox, oy, scale, fill, stroke, width=1) {
+  if (!poly.length) return;
+  ctx.beginPath();
+  ctx.moveTo(ox+poly[0].x*scale, oy+poly[0].y*scale);
+  for(let i=1;i<poly.length;i++) ctx.lineTo(ox+poly[i].x*scale, oy+poly[i].y*scale);
+  ctx.closePath();
+  if(fill){ctx.fillStyle=fill;ctx.fill()}
+  if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.stroke()}
+}
+
+function update() {
+  const g = makeGeometry();
+  const floorY=505, ox=385;
+  const scale = Math.min(3.45, 330/g.c.height);
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#dff2ff';ctx.fillRect(0,0,canvas.width,floorY);
+  ctx.fillStyle='#ddd4c5';ctx.fillRect(0,floorY,canvas.width,canvas.height-floorY);
+  ctx.strokeStyle='#796b5e';ctx.lineWidth=5;
+  ctx.beginPath();ctx.moveTo(0,floorY);ctx.lineTo(canvas.width,floorY);ctx.stroke();
+
+  drawPolygon(g.poly,ox,floorY,scale,'rgba(255,255,255,.55)',null);
+  if(g.waterPoly.length) drawPolygon(g.waterPoly,ox,floorY,scale,'rgba(37,99,235,.52)',null);
+  drawPolygon(g.poly,ox,floorY,scale,null,'#475569',5);
+
+  const px=ox+g.contact.x*scale, py=floorY;
+  ctx.fillStyle='#111827';ctx.beginPath();ctx.arc(px,py,8,0,Math.PI*2);ctx.fill();
+
+  const gx=ox+g.combinedCOM.x*scale, gy=floorY+g.combinedCOM.y*scale;
+  ctx.fillStyle='#ef4444';ctx.beginPath();ctx.arc(gx,gy,9,0,Math.PI*2);ctx.fill();
+  ctx.setLineDash([8,7]);ctx.strokeStyle='#ef4444';ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(gx,gy);ctx.lineTo(gx,floorY);ctx.stroke();ctx.setLineDash([]);
+
+  ctx.font='bold 17px system-ui';
+  ctx.fillStyle='#111827';ctx.fillText('接点',px+12,py-12);
+  ctx.fillStyle='#b91c1c';ctx.fillText('重心',gx+12,gy-10);
+  ctx.font='15px system-ui';ctx.fillStyle='#334155';
+  ctx.fillText(`${g.c.name}　直径 ${g.c.width}mm　高さ ${g.c.height}mm`,18,28);
+  ctx.fillText(`水 ${water.value}ml　角度 ${Number(angle.value).toFixed(1)}°`,18,52);
+
+  const abs=Math.abs(g.offset);
+  let state='ng', text='倒れやすい';
+  if(abs<=0.6){state='ok';text='ほぼ釣り合う'}
+  else if(abs<=2.0){state='near';text='かなり近い'}
+  const status=document.getElementById('status');
+  status.className=`status ${state}`;
+  status.textContent=text;
+
+  document.getElementById('waterOut').textContent=`${water.value} ml`;
+  document.getElementById('angleOut').textContent=`${Number(angle.value).toFixed(1)}°`;
+  document.getElementById('dims').textContent=`${g.c.width}×${g.c.height} mm`;
+  document.getElementById('emptyMass').textContent=`約 ${g.c.emptyMass} g`;
+  document.getElementById('offset').textContent=`${g.offset.toFixed(2)} mm`;
+  document.getElementById('waterHeight').textContent=
+    g.waterPoly.length ? `${Math.abs(g.waterLine).toFixed(1)} mm上` : '0 mm';
+}
+
+function findBestAngle(){
+  let best={angle:0,error:Infinity};
+  for(let a=0;a<=70;a+=0.1){
+    angle.value=a.toFixed(1);
+    const e=Math.abs(makeGeometry().offset);
+    if(e<best.error) best={angle:a,error:e};
+  }
+  angle.value=best.angle.toFixed(1);
+  update();
+}
+
+canType.addEventListener('input',()=>{
+  const c=cans[canType.value];
+  water.max=c.capacity;
+  if(Number(water.value)>c.capacity) water.value=Math.round(c.capacity*0.25);
+  update();
+});
+water.addEventListener('input',update);
+angle.addEventListener('input',update);
+document.getElementById('findAngle').addEventListener('click',findBestAngle);
+document.getElementById('record').addEventListener('click',()=>{
+  const g=makeGeometry();
+  records.unshift([g.c.name,`${water.value}ml`,`${Number(angle.value).toFixed(1)}°`,`${g.offset.toFixed(2)}mm`]);
+  records=records.slice(0,10);
+  document.getElementById('log').innerHTML=records.map(r=>`<tr>${r.map(x=>`<td>${x}</td>`).join('')}</tr>`).join('');
+});
+document.getElementById('clear').addEventListener('click',()=>{
+  records=[];
+  document.getElementById('log').innerHTML='<tr><td colspan="4">まだありません</td></tr>';
+});
+update();
+</script>
+</body>
+</html>
