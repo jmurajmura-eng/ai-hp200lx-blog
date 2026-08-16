@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050914">
+<title>Live 4択 Vision Study</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;background:#050914;color:white;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;height:100%}
+body{display:flex;justify-content:center}
+main{width:min(100%,820px);padding:10px 10px calc(18px + env(safe-area-inset-bottom))}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px 0 8px}
+h1{font-size:18px;margin:0}.badge{font-size:11px;opacity:.7}
+.stage{position:relative;width:100%;height:calc(100vh - 145px);min-height:480px;overflow:hidden;border-radius:18px;background:#111827}
+video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#shade{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 9999px rgba(0,0,0,.12)}
+.guide{position:absolute;left:4%;right:4%;top:10%;bottom:10%;border:1px dashed rgba(255,255,255,.65);border-radius:14px;pointer-events:none}
+.status{position:absolute;left:10px;top:10px;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);padding:7px 10px;border-radius:999px;font-size:12px}
+.answer{position:absolute;right:10px;top:10px;min-width:62px;text-align:center;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);padding:8px 12px;border-radius:14px;font-size:40px;font-weight:900}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}
+button{border:0;border-radius:14px;padding:13px 8px;font-size:16px;font-weight:800}
+#start{background:#fff;color:#111827}#stop{background:#263248;color:#fff}
+.foot{font-size:11px;opacity:.65;margin-top:7px;text-align:center}
+#grab{display:none}
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <h1>リアルタイム4択・学習用</h1>
+    <div class="badge">未知問題対応</div>
+  </div>
+
+  <div class="stage" id="stage">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="overlay"></canvas>
+    <div id="shade"></div>
+    <div class="guide"></div>
+    <div id="status" class="status">停止中</div>
+    <div id="answer" class="answer">—</div>
+  </div>
+
+  <div class="controls">
+    <button id="start">開始</button>
+    <button id="stop">停止</button>
+  </div>
+  <div class="foot">過去問・模試・自作問題などの学習用途向け。APIキーはサーバー側に保存します。</div>
+  <canvas id="grab"></canvas>
+</main>
+
+<script>
+const video = document.getElementById("video");
+const stage = document.getElementById("stage");
+const overlay = document.getElementById("overlay");
+const grab = document.getElementById("grab");
+const statusEl = document.getElementById("status");
+const answerEl = document.getElementById("answer");
+
+let stream = null;
+let running = false;
+let busy = false;
+let timer = null;
+let lastFingerprint = "";
+let lastAnswer = "";
+let lastSpokenAt = 0;
+
+const LOOP_MS = 900;
+const JPEG_QUALITY = 0.70;
+const MAX_WIDTH = 1100;
+
+function resizeOverlay() {
+  const r = stage.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  overlay.width = Math.round(r.width * dpr);
+  overlay.height = Math.round(r.height * dpr);
+}
+window.addEventListener("resize", resizeOverlay);
+
+function clearBox() {
+  overlay.getContext("2d").clearRect(0,0,overlay.width,overlay.height);
+}
+
+function drawBox(normBox, imageW, imageH) {
+  clearBox();
+  if (!Array.isArray(normBox) || normBox.length !== 4) return;
+  let [x1,y1,x2,y2] = normBox.map(Number);
+  if (x2 <= x1 || y2 <= y1) return;
+
+  const r = stage.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const scale = Math.max(r.width / imageW, r.height / imageH);
+  const shownW = imageW * scale;
+  const shownH = imageH * scale;
+  const offX = (r.width - shownW) / 2;
+  const offY = (r.height - shownH) / 2;
+
+  let x = ((x1/1000)*imageW*scale + offX) * dpr;
+  let y = ((y1/1000)*imageH*scale + offY) * dpr;
+  let w = ((x2-x1)/1000)*imageW*scale*dpr;
+  let h = ((y2-y1)/1000)*imageH*scale*dpr;
+
+  const ctx = overlay.getContext("2d");
+  const pad = 8*dpr;
+  ctx.lineWidth = 5*dpr;
+  ctx.strokeStyle = "#ff2222";
+  ctx.shadowColor = "rgba(0,0,0,.75)";
+  ctx.shadowBlur = 6*dpr;
+  ctx.strokeRect(x-pad,y-pad,w+pad*2,h+pad*2);
+}
+
+function speak(answer, fingerprint) {
+  const now = Date.now();
+  if (fingerprint === lastFingerprint && answer === lastAnswer && now-lastSpokenAt < 8000) return;
+
+  speechSynthesis.cancel();
+  const text = /^[1-4]$/.test(answer) ? `${answer}番` : answer;
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "ja-JP";
+  u.rate = 1.35;
+  u.volume = 1.0;
+  speechSynthesis.speak(u);
+
+  lastFingerprint = fingerprint;
+  lastAnswer = answer;
+  lastSpokenAt = now;
+}
+
+function frameDataUrl() {
+  const vw = video.videoWidth, vh = video.videoHeight;
+  if (!vw || !vh) return null;
+
+  const scale = Math.min(1, MAX_WIDTH / vw);
+  const w = Math.max(1, Math.round(vw*scale));
+  const h = Math.max(1, Math.round(vh*scale));
+
+  grab.width = w;
+  grab.height = h;
+  const ctx = grab.getContext("2d");
+  ctx.drawImage(video,0,0,w,h);
+  return { image: grab.toDataURL("image/jpeg", JPEG_QUALITY), w, h };
+}
+
+async function analyze() {
+  if (!running || busy) return;
+  const frame = frameDataUrl();
+  if (!frame) return;
+  busy = true;
+  statusEl.textContent = "AI判定中…";
+
+  try {
+    const resp = await fetch("/api/analyze", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ image: frame.image })
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || "API error");
+
+    if (data.found) {
+      answerEl.textContent = data.answer;
+      statusEl.textContent = "認識";
+      drawBox(data.bbox, frame.w, frame.h);
+      speak(data.answer, data.fingerprint || "");
+    } else {
+      answerEl.textContent = "—";
+      statusEl.textContent = "4択を探索中";
+      clearBox();
+    }
+  } catch(e) {
+    console.error(e);
+    statusEl.textContent = "通信エラー";
+  } finally {
+    busy = false;
+    if (running) timer = setTimeout(analyze, LOOP_MS);
+  }
+}
+
+async function start() {
+  if (running) return;
+  try {
+    const warm = new SpeechSynthesisUtterance("");
+    speechSynthesis.speak(warm);
+
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal:"environment" },
+        width: { ideal:1920 },
+        height:{ ideal:1080 }
+      },
+      audio:false
+    });
+    video.srcObject = stream;
+    await video.play();
+    running = true;
+    resizeOverlay();
+    statusEl.textContent = "開始";
+    analyze();
+  } catch(e) {
+    console.error(e);
+    alert("カメラを開始できません。HTTPSで開き、カメラ権限を許可してください。");
+  }
+}
+
+function stop() {
+  running = false;
+  clearTimeout(timer);
+  stream?.getTracks().forEach(t=>t.stop());
+  stream = null;
+  busy = false;
+  answerEl.textContent = "—";
+  statusEl.textContent = "停止中";
+  clearBox();
+  speechSynthesis.cancel();
+}
+
+document.getElementById("start").addEventListener("click", start);
+document.getElementById("stop").addEventListener("click", stop);
+</script>
+</body>
+</html>
