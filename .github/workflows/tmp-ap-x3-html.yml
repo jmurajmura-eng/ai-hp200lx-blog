@@ -1,0 +1,27 @@
+name: tmp-ap-x3-html
+on:
+  push:
+    branches: [main]
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch AP question HTML mirrors for transcription
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p html
+          for s in 04_haru 04_aki 05_haru 05_aki 06_haru 06_aki; do
+            mkdir -p "html/$s"
+            for n in $(seq 1 80); do
+              curl -fsSL --retry 3 --retry-delay 1 -A 'Mozilla/5.0' \
+                -o "html/$s/q$n.html" "https://www.ap-siken.com/kakomon/$s/q$n.html"
+              sleep 0.08
+            done
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ap-question-html
+          path: html
+          retention-days: 1
