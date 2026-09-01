@@ -1,0 +1,23 @@
+name: tmp-ap-x3-html-fast
+on:
+  push:
+    branches: [main]
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch AP question HTML mirrors in parallel
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p html
+          for s in 04_haru 04_aki 05_haru 05_aki 06_haru 06_aki; do
+            mkdir -p "html/$s"
+            seq 1 80 | xargs -P 12 -I{} sh -c 'curl -fsSL --retry 3 --retry-delay 1 -A "Mozilla/5.0" -o "html/'"$s"'/q{}.html" "https://www.ap-siken.com/kakomon/'"$s"'/q{}.html"'
+          done
+          find html -type f | wc -l
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ap-question-html-fast
+          path: html
+          retention-days: 1
