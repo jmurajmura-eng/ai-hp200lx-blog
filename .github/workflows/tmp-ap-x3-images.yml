@@ -1,0 +1,185 @@
+name: tmp-ap-x3-images
+on:
+  push:
+    branches: [main]
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch question figures
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p figures
+          cat > /tmp/list <<'EOF'
+04_aki/02.png
+04_aki/06.png
+04_aki/23a.png
+04_aki/23e.png
+04_aki/23i.png
+04_aki/23u.png
+04_aki/27.png
+04_aki/27a.png
+04_aki/27e.png
+04_aki/27i.png
+04_aki/27u.png
+04_aki/28.png
+04_aki/29.png
+04_aki/48.png
+04_aki/48a.png
+04_aki/52.png
+04_aki/53.png
+04_aki/54.png
+04_aki/56.png
+04_aki/64.png
+04_aki/69.png
+04_aki/72.png
+04_aki/76.png
+04_aki/77.png
+04_aki/78.png
+04_haru/02.png
+04_haru/04.png
+04_haru/06.png
+04_haru/07.png
+04_haru/09.png
+04_haru/11.png
+04_haru/13.png
+04_haru/14.png
+04_haru/15.png
+04_haru/17.png
+04_haru/19.png
+04_haru/21.png
+04_haru/22.png
+04_haru/23.png
+04_haru/25.png
+04_haru/29.png
+04_haru/30.png
+04_haru/31.png
+04_haru/32.png
+04_haru/33.png
+04_haru/38.png
+04_haru/39.png
+04_haru/41.png
+04_haru/42.png
+04_haru/43.png
+04_haru/45.png
+04_haru/47.png
+04_haru/51.png
+04_haru/52.png
+04_haru/53.png
+04_haru/54.png
+04_haru/55.png
+04_haru/56.png
+04_haru/57.png
+04_haru/58.png
+04_haru/59.png
+04_haru/61.png
+04_haru/63.png
+04_haru/64.png
+04_haru/65.png
+04_haru/66.png
+04_haru/67.png
+04_haru/68.png
+04_haru/69.png
+04_haru/70.png
+04_haru/72.png
+04_haru/73.png
+04_haru/74.png
+04_haru/75.png
+04_haru/77.png
+04_haru/78.png
+05_aki/05.png
+05_aki/09.png
+05_aki/14.png
+05_aki/19.png
+05_aki/21.png
+05_aki/23.png
+05_aki/23a.png
+05_aki/23e.png
+05_aki/23i.png
+05_aki/23u.png
+05_aki/25.png
+05_aki/29_1.png
+05_aki/29_2.png
+05_aki/30.png
+05_aki/30a.png
+05_aki/50.png
+05_aki/51.png
+05_aki/54.png
+05_aki/56.png
+05_aki/57.png
+05_aki/64.png
+05_aki/69.png
+05_aki/72.png
+05_aki/73.png
+05_aki/75.png
+05_aki/77.png
+05_haru/05.png
+05_haru/07.png
+05_haru/09.png
+05_haru/14.png
+05_haru/19.png
+05_haru/21.png
+05_haru/23.png
+05_haru/25.png
+05_haru/28.png
+05_haru/29.png
+05_haru/30.png
+05_haru/48.png
+05_haru/52.png
+05_haru/53.png
+05_haru/54.png
+05_haru/56.png
+05_haru/64.png
+05_haru/69.png
+05_haru/72.png
+05_haru/73.png
+05_haru/75.png
+05_haru/77.png
+06_aki/05.png
+06_aki/14.png
+06_aki/21.png
+06_aki/21a.png
+06_aki/21e.png
+06_aki/21i.png
+06_aki/21u.png
+06_aki/25.png
+06_aki/28.png
+06_aki/29.png
+06_aki/29a.png
+06_aki/29e.png
+06_aki/29i.png
+06_aki/29u.png
+06_aki/30.png
+06_aki/64.png
+06_aki/72.png
+06_aki/73.png
+06_aki/75.png
+06_aki/77.png
+06_haru/05.png
+06_haru/14.png
+06_haru/19.png
+06_haru/21.png
+06_haru/25.png
+06_haru/28.png
+06_haru/29.png
+06_haru/30.png
+06_haru/50.png
+06_haru/52.png
+06_haru/54.png
+06_haru/56.png
+06_haru/64.png
+06_haru/69.png
+06_haru/72.png
+06_haru/73.png
+06_haru/75.png
+06_haru/77.png
+EOF
+          while read rel; do mkdir -p "figures/${rel%/*}"; echo "$rel"; done < /tmp/list
+          cat /tmp/list | xargs -P 12 -I{} sh -c 'mkdir -p "figures/$(dirname "{}")"; curl -fsSL --retry 3 --retry-delay 1 -A "Mozilla/5.0" -o "figures/{}" "https://www.ap-siken.com/kakomon/$(dirname "{}")/img/$(basename "{}")"'
+          find figures -type f | wc -l
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ap-question-figures
+          path: figures
+          retention-days: 1
