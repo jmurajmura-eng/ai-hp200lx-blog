@@ -1,0 +1,25 @@
+name: tmp-ap-x3-figures-auto
+on:
+  push:
+    branches: [main]
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch question figures referenced by past-question pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p pages figures
+          for s in 04_haru 04_aki 05_haru 05_aki 06_haru 06_aki; do
+            mkdir -p "pages/$s" "figures/$s"
+            seq 1 80 | xargs -P 16 -I{} sh -c 'curl -fsSL --retry 3 -A "Mozilla/5.0" -o "pages/'"$s"'/q{}.html" "https://www.ap-siken.com/kakomon/'"$s"'/q{}.html"'
+            grep -rhoE 'src="img/[^"]+"' "pages/$s" | sed -E 's/src="(.*)"/\1/' | sort -u > "/tmp/$s-imgs"
+            cat "/tmp/$s-imgs" | xargs -P 16 -I{} sh -c 'curl -fsSL --retry 3 -A "Mozilla/5.0" -o "figures/'"$s"'/$(basename "{}")" "https://www.ap-siken.com/kakomon/'"$s"'/{}"'
+          done
+          find figures -type f | wc -l
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ap-question-figures-auto
+          path: figures
+          retention-days: 1
